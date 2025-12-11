@@ -53,7 +53,7 @@ def create_access_token(data: dict, expires_minutes: int = 120):
 
 def authenticate_user(login: LoginRequest):
     """
-    Verifica email + contraseña.
+    Verifica email + contraseña y devuelve nombre del usuario.
     """
     user = supabase.table("users").select("*").eq("email", login.email).maybe_single().execute()
 
@@ -68,16 +68,47 @@ def authenticate_user(login: LoginRequest):
     # Obtener rol
     role = supabase.table("roles").select("name").eq("id", user_data["role_id"]).single().execute()
 
+    # 🔧 CORRECCIÓN: Ahora user_id es INT4, mantenerlo como int
+    user_id = int(user_data["id"])
+    
+    print(f"🔍 authenticate_user - ID del usuario: {user_id}")
+    print(f"🔍 Tipo de user_id: {type(user_id)}")
+    
+    # Obtener el nombre desde la tabla profiles
+    try:
+        profile = supabase.table("profiles")\
+            .select("name")\
+            .eq("id", user_id)\
+            .execute()
+        
+        name = profile.data[0].get("name") if profile.data else None
+    except:
+        name = None
+    
+    # Si no hay nombre en profiles, usar el full_name de users o extraer del email
+    if not name:
+        name = user_data.get("full_name") or login.email.split("@")[0]
+    
+    # 🔧 CORRECCIÓN: Pasar el ID como string en "sub" (JWT estándar)
     token = create_access_token({
-        "id": user_data["id"],
+        "sub": str(user_id),  # ✅ Convertir a string para JWT
         "email": user_data["email"],
-        "role": role.data["name"]
+        "role": role.data["name"],
+        "name": name
     })
+    
+    print(f"✅ Token generado con ID: {user_id}")
 
     return {
         "access_token": token,
         "token_type": "bearer",
-        "role": role.data["name"]
+        "role": role.data["name"],
+        "user": {
+            "id": user_id,  # ✅ INT
+            "email": user_data["email"],
+            "name": name,
+            "role": role.data["name"]
+        }
     }
 
 
@@ -85,7 +116,7 @@ def authenticate_user(login: LoginRequest):
 # 📌 USER SERVICES (CRUD)
 # ============================
 
-def get_user_by_id(user_id: int):
+def get_user_by_id(user_id: int):  # ✅ Cambiado a int
     """
     Obtiene un usuario por ID y agrega el nombre del rol.
     """
@@ -134,11 +165,10 @@ def create_user(data: UserCreate):
     hashed = hash_password(data.password)
     
     try:
-        # 🔴 CORRECCIÓN CRÍTICA: Usar "full_name" en lugar de "name"
         result = supabase.table("users").insert({
             "email": data.email,
             "hashed_password": hashed,
-            "full_name": data.name,  # 🔴 El schema recibe "name" pero la BD espera "full_name"
+            "full_name": data.full_name,  # ✅ CORREGIDO: Usar data.full_name
             "role_id": 2,
             "age": data.age,
             "phone": data.phone,
@@ -151,6 +181,22 @@ def create_user(data: UserCreate):
             raise HTTPException(status_code=500, detail="No se pudo crear el usuario en la base de datos.")
 
         user_data = result.data[0]
+        user_id = int(user_data["id"])  # ✅ Mantener como int
+        
+        print(f"✅ Usuario creado con ID: {user_id}")
+        
+        # Crear perfil en la tabla profiles
+        try:
+            supabase.table("profiles").insert({
+                "id": user_id,  # ✅ INT4
+                "name": data.full_name,  # ✅ CORREGIDO: Usar data.full_name
+                "age": data.age,
+                "phone": data.phone,
+                "gender": data.gender
+            }).execute()
+            print(f"✅ Perfil creado para user_id: {user_id}")
+        except Exception as profile_error:
+            print(f"⚠️ No se pudo crear perfil (no crítico): {profile_error}")
         
         # Obtener el nombre del rol
         role = supabase.table("roles").select("name").eq("id", user_data["role_id"]).single().execute()
@@ -165,7 +211,7 @@ def create_user(data: UserCreate):
         raise HTTPException(status_code=500, detail=f"Error al crear usuario: {str(e)}")
 
 
-def update_user(user_id: int, data: UserUpdate):
+def update_user(user_id: int, data: UserUpdate):  # ✅ Cambiado a int
     """
     Actualiza un usuario existente.
     """
@@ -184,7 +230,7 @@ def update_user(user_id: int, data: UserUpdate):
     return user_data
 
 
-def delete_user(user_id: int):
+def delete_user(user_id: int):  # ✅ Cambiado a int
     """
     Elimina un usuario.
     """

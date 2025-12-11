@@ -24,15 +24,18 @@ class LoginResponse(BaseModel):
 class RegisterRequest(BaseModel):
     email: EmailStr = Field(..., example="nuevo@correo.com")
     password: str = Field(..., min_length=6)
-    name: str = Field(..., example="Juan Pérez")
-    role_id: int = Field(..., example=2)
+    full_name: str = Field(..., example="Juan Pérez")
+    age: int = Field(..., example=30)
+    phone: str = Field(..., example="123456789")
+    gender: str = Field(..., example="Masculino")
     recaptcha_token: str = Field(..., description="Token de reCAPTCHA v2")
+    role_id: int = Field(default=2, example=2)
 
 
 class RegisterResponse(BaseModel):
     id: int
     email: EmailStr
-    name: str
+    full_name: str
     role: str
     message: str = "Usuario registrado correctamente"
 
@@ -57,6 +60,6 @@ class ResetPasswordRequest(BaseModel):
 # ============================
 
 class TokenData(BaseModel):
-    id: int
+    id: str  # ✅ CAMBIADO: Ahora es string (UUID)
     email: EmailStr
     role: str

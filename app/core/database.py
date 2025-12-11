@@ -1,7 +1,6 @@
-from app.core.config import get_settings
 from supabase import create_client, Client
+from app.core.config import settings
 
-settings = get_settings()
 
 def get_supabase() -> Client:
     """
@@ -16,6 +15,7 @@ def get_supabase() -> Client:
 
     client: Client = create_client(url, key)
     return client
+
 
 # Cliente global reutilizable
 supabase = get_supabase()

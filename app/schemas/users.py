@@ -21,7 +21,7 @@ class UserBase(BaseModel):
 class UserCreate(BaseModel):
     email: EmailStr = Field(..., example="nuevo@correo.com")
     password: str = Field(..., min_length=6)
-    name: str = Field(..., example="Laura Gómez")  # Recibe "name" del frontend
+    full_name: str = Field(..., example="Laura Gómez")  # Recibe "full_name" del frontend
     # 🔴 CORRECCIÓN: role_id ahora es opcional y tiene valor por defecto
     role_id: Optional[int] = Field(default=2, example=2)
     # 🔴 CORRECCIÓN: Se añaden los campos que el formulario de registro envía
@@ -72,18 +72,6 @@ class UserResponse(BaseModel):
 class PublicUser(BaseModel):
     id: int
     full_name: Optional[str] = None  # 🔴 Cambiado de "name" a "full_name"
-    role: str
-
-    class Config:
-        from_attributes = True
-
-# ============================
-# 📌 USUARIO PÚBLICO (sin datos sensibles)
-# ============================
-
-class PublicUser(BaseModel):
-    id: int
-    name: Optional[str]
     role: str
 
     class Config:
